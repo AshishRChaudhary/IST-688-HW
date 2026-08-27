@@ -41,7 +41,7 @@ else:
             "Upload a document (.txt or .pdf)", type=("txt", "pdf")
         )
 
-        # Let the user pick which model to query.
+        # Let the user pick which model to query :)
         model = st.selectbox(
             "Choose a model",
             ("gpt-3.5-turbo", "gpt-4.1", "gpt-5-chat-latest", "gpt-5-nano"),
