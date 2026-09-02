@@ -4,4 +4,7 @@ __pycache__/
 venv/
 .env
 .streamlit/secrets.toml
+**/.streamlit/secrets.toml
 .DS_Store
+*.pdf
+MODEL_COMPARISON.md
