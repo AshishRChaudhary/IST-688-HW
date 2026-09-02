@@ -17,17 +17,18 @@ SUMMARY_INSTRUCTIONS = {
     "5 bullet points": "Summarize the page in 5 bullet points.",
 }
 
-LANGUAGES = ["English", "Hindi", "Spanish", "French"]
+LANGUAGES = ["English", "Hindi", "Spanish"]
+
+OPENAI = "OpenAI"
+FOUNDRY = "Claude (Azure AI Foundry)"
 
 # Each LLM has a cheap default model and a set of 'advanced' models.
 LLMS = {
-    "OpenAI": {
-        "secret": "OPENAI_API_KEY",
+    OPENAI: {
         "default_model": "gpt-5-nano",
         "advanced_models": ["gpt-4.1", "gpt-5-chat-latest"],
     },
-    "Anthropic (Claude)": {
-        "secret": "ANTHROPIC_API_KEY",
+    FOUNDRY: {
         "default_model": "claude-haiku-4-5",
         "advanced_models": ["claude-opus-5", "claude-sonnet-5"],
     },
@@ -45,9 +46,9 @@ def read_url_content(url):
         return None
 
 
-def get_api_key(secret_name):
+def get_secret(name):
     try:
-        return st.secrets[secret_name]
+        return st.secrets[name]
     except (KeyError, FileNotFoundError):
         # No secrets.toml at all, or the key is missing from it.
         return None
@@ -61,10 +62,42 @@ def get_openai_client(api_key):
 
 
 @st.cache_resource(show_spinner=False)
-def get_anthropic_client(api_key):
-    client = anthropic.Anthropic(api_key=api_key)
-    client.models.list()  # Fails if the key is not valid for Anthropic.
+def get_foundry_client(api_key, resource, model):
+    client = anthropic.AnthropicFoundry(api_key=api_key, resource=resource)
+    # Foundry has no models endpoint, so send a one-token message instead: it
+    # checks the key, the resource, and that the deployment exists.
+    client.messages.create(
+        model=model, max_tokens=1, messages=[{"role": "user", "content": "hi"}]
+    )
     return client
+
+
+def connect(llm_name, model):
+    """Return a validated client for the selected LLM, or None with an error shown."""
+    if llm_name == OPENAI:
+        api_key = get_secret("OPENAI_API_KEY")
+        if not api_key:
+            st.error("Add `OPENAI_API_KEY` to your secrets to use OpenAI.")
+            return None
+        try:
+            return get_openai_client(api_key)
+        except openai.OpenAIError as error:
+            st.error(f"The OpenAI API key is not valid: {error}")
+            return None
+
+    api_key = get_secret("ANTHROPIC_FOUNDRY_API_KEY")
+    resource = get_secret("ANTHROPIC_FOUNDRY_RESOURCE")
+    if not (api_key and resource):
+        st.error(
+            "Add `ANTHROPIC_FOUNDRY_API_KEY` and `ANTHROPIC_FOUNDRY_RESOURCE` "
+            "to your secrets to use Foundry."
+        )
+        return None
+    try:
+        return get_foundry_client(api_key, resource, model)
+    except anthropic.AnthropicError as error:
+        st.error(f"Could not reach `{model}` on Azure AI Foundry: {error}")
+        return None
 
 
 with st.sidebar:
@@ -85,18 +118,8 @@ with st.sidebar:
 url = st.text_input("Web page URL", placeholder="https://example.com")
 
 if url:
-    api_key = get_api_key(llm["secret"])
-    if not api_key:
-        st.error(f"Add `{llm['secret']}` to your secrets to use {llm_name}.")
-        st.stop()
-
-    try:
-        if llm_name == "OpenAI":
-            client = get_openai_client(api_key)
-        else:
-            client = get_anthropic_client(api_key)
-    except (openai.OpenAIError, anthropic.APIError) as error:
-        st.error(f"The {llm_name} API key is not valid: {error}")
+    client = connect(llm_name, model)
+    if client is None:
         st.stop()
 
     document = read_url_content(url)
@@ -116,7 +139,7 @@ if url:
         ]
 
         try:
-            if llm_name == "OpenAI":
+            if llm_name == OPENAI:
                 stream = client.chat.completions.create(
                     model=model,
                     messages=messages,
@@ -130,7 +153,7 @@ if url:
                     messages=messages,
                 ) as stream:
                     st.write_stream(stream.text_stream)
-        except (openai.OpenAIError, anthropic.APIError) as error:
+        except (openai.OpenAIError, anthropic.AnthropicError) as error:
             st.error(f"{llm_name} could not generate a summary: {error}")
 else:
     st.info("Please enter a URL to generate a summary.")

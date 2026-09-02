@@ -10,8 +10,9 @@ via `st.navigation` in `streamlit_app.py`. New homeworks get added the same way:
   API key via a text input).
 - **HW 2** (`HW/HW2.py`, default page) - URL summarizer: enter a web page URL at the top of
   the page and get a summary, with sidebar options for summary type, output language, and
-  which LLM to use (OpenAI or Anthropic), plus the 'use advanced model' checkbox. Keys come
-  from `st.secrets` and are validated against the selected provider before any summary runs.
+  which LLM to use (direct OpenAI, or Claude on Azure AI Foundry), plus the 'use advanced
+  model' checkbox. Credentials come from `st.secrets` and are validated against the selected
+  provider before any summary runs.
 
 `HW1.py` also exists at the repo root: that is the standalone HW 1 app, deployed on its own
 per the HW 1 assignment (`streamlit run HW1.py`). It is byte-identical to `HW/HW1.py` — if you
@@ -28,12 +29,17 @@ locally and are gitignored (not part of the repo).
    $ pip install -r requirements.txt
    ```
 
-2. Add your API keys to `.streamlit/secrets.toml`:
+2. Add your credentials to `.streamlit/secrets.toml`:
 
    ```
    OPENAI_API_KEY = "your-key-here"
-   ANTHROPIC_API_KEY = "your-key-here"
+   ANTHROPIC_FOUNDRY_API_KEY = "your-foundry-key-here"
+   ANTHROPIC_FOUNDRY_RESOURCE = "your-foundry-resource-name"
    ```
+
+   `ANTHROPIC_FOUNDRY_RESOURCE` is the resource name only — `my-resource` for
+   `https://my-resource.services.ai.azure.com/anthropic/`. One key and one resource cover
+   every Claude model deployed in that resource, so no direct Anthropic API key is needed.
 
 3. Run the app
 
