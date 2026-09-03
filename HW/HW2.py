@@ -19,7 +19,6 @@ SUMMARY_INSTRUCTIONS = {
 
 LANGUAGES = ["English", "Hindi", "Spanish", "French"]
 
-# Each LLM has a cheap default model and a set of 'advanced' models.
 LLMS = {
     "OpenAI": {
         "secret": "OPENAI_API_KEY",
@@ -38,33 +37,11 @@ def read_url_content(url):
     try:
         response = requests.get(url)
         response.raise_for_status()  # Raise an exception for HTTP errors
-        soup = BeautifulSoup(response.content, "html.parser")
+        soup = BeautifulSoup(response.content, 'html.parser')
         return soup.get_text()
     except requests.RequestException as e:
         print(f"Error reading {url}: {e}")
         return None
-
-
-def get_api_key(secret_name):
-    try:
-        return st.secrets[secret_name]
-    except (KeyError, FileNotFoundError):
-        # No secrets.toml at all, or the key is missing from it.
-        return None
-
-
-@st.cache_resource(show_spinner=False)
-def get_openai_client(api_key):
-    client = OpenAI(api_key=api_key)
-    client.models.list()  # Fails if the key is not valid for OpenAI.
-    return client
-
-
-@st.cache_resource(show_spinner=False)
-def get_anthropic_client(api_key):
-    client = anthropic.Anthropic(api_key=api_key)
-    client.models.list()  # Fails if the key is not valid for Anthropic.
-    return client
 
 
 with st.sidebar:
@@ -80,22 +57,20 @@ with st.sidebar:
         model = st.selectbox("Choose a model", llm["advanced_models"])
     else:
         model = llm["default_model"]
-    st.caption(f"Using `{model}`")
 
 url = st.text_input("Web page URL", placeholder="https://example.com")
 
 if url:
-    api_key = get_api_key(llm["secret"])
-    if not api_key:
-        st.error(f"Add `{llm['secret']}` to your secrets to use {llm_name}.")
-        st.stop()
+    api_key = st.secrets[llm["secret"]]
 
+    # Make sure the key is valid for the selected LLM.
     try:
         if llm_name == "OpenAI":
-            client = get_openai_client(api_key)
+            client = OpenAI(api_key=api_key)
         else:
-            client = get_anthropic_client(api_key)
-    except (openai.OpenAIError, anthropic.APIError) as error:
+            client = anthropic.Anthropic(api_key=api_key)
+        client.models.list()
+    except (openai.OpenAIError, anthropic.AnthropicError) as error:
         st.error(f"The {llm_name} API key is not valid: {error}")
         st.stop()
 
@@ -115,22 +90,19 @@ if url:
             }
         ]
 
-        try:
-            if llm_name == "OpenAI":
-                stream = client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    stream=True,
-                )
-                st.write_stream(stream)
-            else:
-                with client.messages.stream(
-                    model=model,
-                    max_tokens=2000,
-                    messages=messages,
-                ) as stream:
-                    st.write_stream(stream.text_stream)
-        except (openai.OpenAIError, anthropic.APIError) as error:
-            st.error(f"{llm_name} could not generate a summary: {error}")
+        if llm_name == "OpenAI":
+            stream = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                stream=True,
+            )
+            st.write_stream(stream)
+        else:
+            with client.messages.stream(
+                model=model,
+                max_tokens=2000,
+                messages=messages,
+            ) as stream:
+                st.write_stream(stream.text_stream)
 else:
     st.info("Please enter a URL to generate a summary.")
