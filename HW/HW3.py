@@ -22,12 +22,6 @@ MODELS = {
 
 SUMMARY_AFTER = 6  # messages, i.e. 3 user-assistant exchanges
 
-# Prefilled so the app is ready to use; clear or replace them for other pages.
-DEFAULT_URLS = [
-    "https://www.howbaseballworks.com/TheBasics.htm",
-    "https://www.pbs.org/kenburns/baseball/baseball-for-beginners",
-]
-
 RULES = (
     "You are a helpful assistant who answers questions about the documents below. "
     "Base your answers on the documents. If the documents do not cover something, say "
@@ -125,8 +119,8 @@ if "summary" not in st.session_state:
 
 with st.sidebar:
     st.header("URLs")
-    url1 = st.text_input("First URL", value=DEFAULT_URLS[0])
-    url2 = st.text_input("Second URL (optional)", value=DEFAULT_URLS[1])
+    url1 = st.text_input("First URL", placeholder="https://example.com")
+    url2 = st.text_input("Second URL (optional)", placeholder="https://example.com")
 
     st.header("LLM")
     model_label = st.selectbox("Model", list(MODELS.keys()))
