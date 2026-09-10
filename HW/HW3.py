@@ -22,6 +22,12 @@ MODELS = {
 
 SUMMARY_AFTER = 6  # messages, i.e. 3 user-assistant exchanges
 
+# Prefilled so the app is ready to use; clear or replace them for other pages.
+DEFAULT_URLS = [
+    "https://www.howbaseballworks.com/TheBasics.htm",
+    "https://www.pbs.org/kenburns/baseball/baseball-for-beginners",
+]
+
 RULES = (
     "You are a helpful assistant who answers questions about the documents below. "
     "Base your answers on the documents. If the documents do not cover something, say "
@@ -40,13 +46,17 @@ def read_url_content(url):
         return None
 
 
-@st.cache_data(show_spinner=False)
 def load_documents(urls):
     """Read each URL once and keep it, so every chat turn does not refetch."""
+    if "documents" not in st.session_state:
+        st.session_state.documents = {}
+
     documents = {}
     for url in urls:
         if url:
-            documents[url] = read_url_content(url)
+            if url not in st.session_state.documents:
+                st.session_state.documents[url] = read_url_content(url)
+            documents[url] = st.session_state.documents[url]
     return documents
 
 
@@ -115,8 +125,8 @@ if "summary" not in st.session_state:
 
 with st.sidebar:
     st.header("URLs")
-    url1 = st.text_input("First URL", placeholder="https://example.com")
-    url2 = st.text_input("Second URL (optional)", placeholder="https://example.com")
+    url1 = st.text_input("First URL", value=DEFAULT_URLS[0])
+    url2 = st.text_input("Second URL (optional)", value=DEFAULT_URLS[1])
 
     st.header("LLM")
     model_label = st.selectbox("Model", list(MODELS.keys()))
