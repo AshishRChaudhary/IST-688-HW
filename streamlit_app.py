@@ -6,6 +6,7 @@ st.sidebar.title("HW Manager")
 hw1_page = st.Page("HW/HW1.py", title="HW 1")
 hw2_page = st.Page("HW/HW2.py", title="HW 2", default=True)
 hw3_page = st.Page("HW/HW3.py", title="HW 3")
+hw4_page = st.Page("HW/HW4.py", title="HW 4")
 
-pg = st.navigation([hw1_page, hw2_page, hw3_page])
+pg = st.navigation([hw1_page, hw2_page, hw3_page, hw4_page])
 pg.run()

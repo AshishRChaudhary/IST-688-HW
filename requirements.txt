@@ -4,3 +4,5 @@ anthropic
 pypdf
 requests
 beautifulsoup4
+chromadb==1.5.9
+pysqlite3-binary
